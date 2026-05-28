@@ -6,6 +6,15 @@ webcam — and interrupts you when it catches you.
 It runs entirely on your machine. No video, snapshots, or raw frames are ever
 saved or sent anywhere.
 
+## Performance
+
+App consumes about 700MB of RAM and sits on CPU - this is due to the live inspection of human in front of the camera
+
+## Design choices
+
+App uses code (available in Settings) that prevents to close the app by mistake.
+There is a siren sound when user bites his nails, you can lower the volume to 0% to mute it and leave just fullscreen overlay
+
 ## Download
 
 Grab the latest signed and notarized `.dmg` from the
