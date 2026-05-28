@@ -1,5 +1,16 @@
-# CocoIndex Code (ccc)
+# Local AI agent tooling
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+skills-lock.json
+/.agents/
+/.codex/
+/.claude/
+/.cursor/
+/.cursorrules
+/.windsurf/
 /.cocoindex_code/
+/cocoindex_code/
 
 # Node / Vite
 node_modules/
@@ -14,9 +25,6 @@ src-tauri/gen/schemas/
 
 # macOS
 .DS_Store
-
-# Local agent tooling (vendored skills, not part of the app)
-/.agents/
 
 # Apple signing material — never commit
 *.p12
