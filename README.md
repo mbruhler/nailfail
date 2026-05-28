@@ -15,6 +15,8 @@ App consumes about 700MB of RAM and sits on CPU - this is due to the live inspec
 App uses code (available in Settings) that prevents to close the app by mistake.
 There is a siren sound when user bites his nails, you can lower the volume to 0% to mute it and leave just fullscreen overlay
 
+## 100% Vibecoded
+
 ## Download
 
 Grab the latest signed and notarized `.dmg` from the
