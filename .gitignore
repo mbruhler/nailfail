@@ -1,0 +1,25 @@
+# CocoIndex Code (ccc)
+/.cocoindex_code/
+
+# Node / Vite
+node_modules/
+dist/
+
+# Tauri / Rust
+src-tauri/target/
+src-tauri/gen/schemas/
+
+# Logs
+*.log
+
+# macOS
+.DS_Store
+
+# Local agent tooling (vendored skills, not part of the app)
+/.agents/
+
+# Apple signing material — never commit
+*.p12
+*.p8
+*.cer
+*.certSigningRequest

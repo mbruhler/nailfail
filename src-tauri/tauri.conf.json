@@ -1,0 +1,35 @@
+{
+  "$schema": "./gen/schemas/desktop-schema.json",
+  "productName": "Nailfail",
+  "version": "0.1.0",
+  "identifier": "com.nailfail.desktop",
+  "build": {
+    "beforeDevCommand": "npm run prepare-assets && npm run dev",
+    "beforeBuildCommand": "npm run prepare-assets && npm run build",
+    "devUrl": "http://localhost:1420",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Nailfail",
+        "width": 380,
+        "height": 640,
+        "minWidth": 340,
+        "minHeight": 520,
+        "maxWidth": 520,
+        "resizable": true,
+        "maximizable": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob: mediastream:; connect-src 'self' ipc: http://ipc.localhost http://localhost:1420 ws://localhost:1420 http://127.0.0.1:1420 ws://127.0.0.1:1420; worker-src 'self' blob:",
+      "capabilities": ["default"]
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all"
+  }
+}

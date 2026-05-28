@@ -1,0 +1,65 @@
+name: Release
+
+# Builds, signs and notarizes the macOS app, then publishes a GitHub Release
+# with the .dmg attached. Triggered when a version tag (e.g. v0.1.0) is pushed.
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  release:
+    permissions:
+      contents: write
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build, sign, notarize and release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Developer ID Application certificate (.p12, base64-encoded) + its password
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          # Notarization via app-specific password
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "Nailfail ${{ github.ref_name }}"
+          releaseBody: |
+            Local, privacy-first nail-biting detector for macOS.
+
+            ### Install
+            1. Download the `.dmg` below.
+            2. Open it and drag **Nailfail** into Applications.
+            3. Launch it and allow camera access when prompted.
+
+            The build is signed with a Developer ID certificate and notarized by Apple,
+            so it opens without Gatekeeper warnings.
+          releaseDraft: false
+          prerelease: false
+          args: --target universal-apple-darwin
