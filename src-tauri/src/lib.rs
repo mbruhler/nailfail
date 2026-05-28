@@ -1,7 +1,16 @@
 use serde::Serialize;
+use std::sync::Mutex;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::TrayIconBuilder;
-use tauri::{AppHandle, Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder, WindowEvent};
+use tauri::{
+    AppHandle, Emitter, LogicalSize, Manager, PhysicalPosition, PhysicalSize, State, WebviewUrl,
+    WebviewWindowBuilder, WindowEvent,
+};
+
+/// Where the main window sat before we parked it to the tray, so Show can put it
+/// back exactly where the user left it. Physical pixels: (x, y, width, height).
+#[derive(Default)]
+struct WindowGeometry(Mutex<Option<(i32, i32, u32, u32)>>);
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -98,13 +107,69 @@ fn dismiss_block_screen(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-/// Hide the main window into the tray.
+/// Send the main window to the tray.
 #[tauri::command]
 fn hide_to_tray(app: AppHandle) -> Result<(), String> {
-    if let Some(window) = app.get_webview_window("main") {
-        window.hide().map_err(|error| error.to_string())?;
-    }
+    park_to_tray(&app);
     Ok(())
+}
+
+/// "Hide" the window without actually hiding it from WebKit.
+///
+/// A truly hidden (ordered-out / minimized / occluded) window makes WebKit mark
+/// the page as hidden, which freezes the camera `<video>` frames and throttles
+/// timers to ~1 Hz — so detection, and therefore the block screen, stalls while
+/// the app is in the tray. Instead we shrink the window to a 1x1, click-through,
+/// always-on-top sliver that stays on screen and unoccluded. The page keeps
+/// reporting itself visible, so the camera stream and detection loop keep
+/// running at full speed while the window is effectively invisible to the user.
+fn park_to_tray(app: &AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        // Remember the current geometry so Show can restore it faithfully.
+        if let (Ok(pos), Ok(size)) = (window.outer_position(), window.inner_size()) {
+            if let Some(state) = app.try_state::<WindowGeometry>() {
+                if let Ok(mut slot) = state.0.lock() {
+                    *slot = Some((pos.x, pos.y, size.width, size.height));
+                }
+            }
+        }
+
+        let _ = window.set_min_size(Some(LogicalSize::new(1.0, 1.0)));
+        let _ = window.set_decorations(false);
+        let _ = window.set_always_on_top(true);
+        let _ = window.set_skip_taskbar(true);
+        let _ = window.set_size(PhysicalSize::new(1u32, 1u32));
+        let _ = window.set_position(PhysicalPosition::new(0i32, 0i32));
+        let _ = window.set_ignore_cursor_events(true);
+        // Stay shown — hiding is exactly what we're avoiding.
+        let _ = window.show();
+    }
+}
+
+/// Bring the parked window back to a normal, interactive window.
+fn restore_window(app: &AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.set_ignore_cursor_events(false);
+        let _ = window.set_always_on_top(false);
+        let _ = window.set_skip_taskbar(false);
+        let _ = window.set_decorations(true);
+        let _ = window.set_min_size(Some(LogicalSize::new(340.0, 520.0)));
+
+        let restored = app
+            .try_state::<WindowGeometry>()
+            .and_then(|state| state.0.lock().ok().and_then(|slot| *slot));
+
+        if let Some((x, y, w, h)) = restored {
+            let _ = window.set_size(PhysicalSize::new(w, h));
+            let _ = window.set_position(PhysicalPosition::new(x, y));
+        } else {
+            let _ = window.set_size(LogicalSize::new(380.0, 640.0));
+            let _ = window.center();
+        }
+
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
 }
 
 #[tauri::command]
@@ -126,6 +191,7 @@ fn reset_camera_permission() -> Result<(), String> {
 pub fn run() {
     tauri::Builder::default()
         .manage(ExitCode(generate_exit_code()))
+        .manage(WindowGeometry::default())
         .invoke_handler(tauri::generate_handler![
             app_info,
             request_camera_permission,
@@ -158,7 +224,7 @@ pub fn run() {
             if let WindowEvent::CloseRequested { api, .. } = event {
                 if window.label() == "main" {
                     api.prevent_close();
-                    let _ = window.hide();
+                    park_to_tray(window.app_handle());
                 }
             }
         })
@@ -195,10 +261,7 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
 }
 
 fn show_main_window(app: &AppHandle) {
-    if let Some(window) = app.get_webview_window("main") {
-        let _ = window.show();
-        let _ = window.set_focus();
-    }
+    restore_window(app);
 }
 
 #[cfg(target_os = "macos")]

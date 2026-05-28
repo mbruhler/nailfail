@@ -71,9 +71,9 @@ export function useNailBitingMonitor({
         setPhase("watching");
 
         // Driven by setTimeout (not requestAnimationFrame) on purpose: rAF is
-        // fully paused while the window is hidden to the tray, which would stop
+        // paused while the window is parked in the tray, which would stop
         // detection — and the block-screen punishment — exactly when we still
-        // need to be watching. Timers keep firing while hidden.
+        // need to be watching. Timers keep firing.
         const tick = () => {
           if (cancelled) {
             return;
